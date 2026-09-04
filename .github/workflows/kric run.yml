@@ -1,0 +1,72 @@
+name: Kri-emb-fawa & JSON
+
+on:
+  schedule:
+    # Runs at minute 20 and 50 past every hour
+    - cron: '7,37 * * * *'
+  workflow_dispatch: # Allows manual trigger from Actions tab
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies & Tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y p7zip-full
+          pip install requests urllib3
+
+      - name: Decrypt and Extract Script
+        env:
+          ZIP_PASS: ${{ secrets.ZIP_PASSWORD }}
+        run: |
+          # Extract quietly using 7z
+          7z x updater.zip -p"${ZIP_PASS}" -y
+
+      - name: Run Fetch Script
+        run: python updater.py
+
+      - name: Wipe Raw Code from Runner
+        if: always()
+        run: |
+          # Deletes the decrypted file whether the script succeeds or fails
+          rm -f updater.py
+
+      - name: Push Updates to Target Repo
+        env:
+          TARGET_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
+          TARGET_USER: "kora-moss"
+          TARGET_REPO: "uni-api"
+          TARGET_BRANCH: "main"
+        run: |
+          git config --global user.name "AutoUpdater Bot"
+          git config --global user.email "bot@users.noreply.github.com"
+
+          # Clone destination repo
+          git clone --depth 1 https://${TARGET_USER}:${TARGET_TOKEN}@github.com/${TARGET_USER}/${TARGET_REPO}.git target_repo
+
+          # Safe copy folders if they exist
+          for dir in crich fawa emhd; do
+            if [ -d "$dir" ]; then
+              mkdir -p "target_repo/$dir"
+              cp -rf "$dir"/. "target_repo/$dir/"
+            fi
+          done
+
+          cd target_repo
+          git add crich/ fawa/ emhd/
+
+          if git diff --staged --quiet; then
+            echo "No changes detected. Nothing to push."
+          else
+            git commit -m "Auto-update playlists and data"
+            git push origin ${TARGET_BRANCH}
+            echo "Successfully updated and pushed to ${TARGET_USER}/${TARGET_REPO}!"
+          fi
