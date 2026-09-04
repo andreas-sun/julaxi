@@ -3,7 +3,7 @@ name: Kri-emb-fawa & JSON
 on:
   schedule:
     # Runs at minute 20 and 50 past every hour
-    - cron: '20,50 * * * *'
+    - cron: '7,37 * * * *'
   workflow_dispatch: # Allows manual trigger from Actions tab
 
 jobs:
