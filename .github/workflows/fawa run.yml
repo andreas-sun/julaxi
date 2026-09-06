@@ -1,0 +1,57 @@
+name: Auto Update FAWA
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  update-fawa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install requests urllib3
+
+      - name: Run FAWA Script
+        run: python fawa.py
+
+      - name: Create Password Protected ZIP
+        env:
+          ZIP_PASS: ${{ secrets.FAWA_PASS }}
+        run: |
+          7z a -tzip -p"${ZIP_PASS}" -mem=AES256 fawa.zip ./fawa
+
+      - name: Push Updates to Target Repo
+        env:
+          TARGET_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
+          TARGET_USER: "kora-moss"
+          TARGET_REPO: "uni-api"
+          TARGET_BRANCH: "main"
+        run: |
+          git config --global user.name "AutoUpdater Bot"
+          git config --global user.email "bot@users.noreply.github.com"
+
+          git clone --depth 1 https://${TARGET_USER}:${TARGET_TOKEN}@github.com/${TARGET_USER}/${TARGET_REPO}.git target_repo
+
+          mkdir -p target_repo/fawa
+          cp -rf fawa/. target_repo/fawa/
+          cp -f fawa.zip target_repo/
+
+          cd target_repo
+          git add fawa/ fawa.zip
+
+          if git diff --staged --quiet; then
+            echo "No changes detected. Nothing to push."
+          else
+            git commit -m "Auto-update FAWA data and encrypted zip"
+            git push origin ${TARGET_BRANCH}
+            echo "Successfully updated FAWA!"
+          fi
