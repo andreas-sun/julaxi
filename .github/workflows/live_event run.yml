@@ -41,7 +41,7 @@ jobs:
       # Change the input and output m3u paths as needed
       - name: Run Live Event Filter
         run: |
-          python liveevent.py target_repo/crich/play.m3u target_repo/crich/live_play.m3u
+          python liveevent.py target_repo/live_event/live_play.m3u
 
       - name: Push Updates to Target Repo
         env:
