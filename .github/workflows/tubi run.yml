@@ -24,33 +24,9 @@ jobs:
         env:
           ZIP_PASS: ${{ secrets.ZIP_PASS }}
         run: |
-          7z x -p"${ZIP_PASS}" -y tubi.zip
+          7z x -p"${ZIP_PASS}" -y main.zip
 
       - name: Run Tubi Script
-        run: python tubi.py
-
-      - name: Push Updates to Target Repo
         env:
-          TARGET_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
-          TARGET_USER: "kora-moss"
-          TARGET_REPO: "uni-api"
-          TARGET_BRANCH: "main"
-        run: |
-          git config --global user.name "AutoUpdater Bot"
-          git config --global user.email "bot@users.noreply.github.com"
-
-          git clone --depth 1 https://${TARGET_USER}:${TARGET_TOKEN}@github.com/${TARGET_USER}/${TARGET_REPO}.git target_repo
-
-          mkdir -p target_repo/tubi
-          cp -rf tubi/. target_repo/tubi/
-
-          cd target_repo
-          git add tubi/
-
-          if git diff --staged --quiet; then
-            echo "No changes detected. Nothing to push."
-          else
-            git commit -m "Auto-update Tubi playlist and EPG"
-            git push origin ${TARGET_BRANCH}
-            echo "Successfully updated Tubi!"
-          fi
+          TARGET_REPO_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
+        run: python tubi.py

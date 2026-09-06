@@ -24,7 +24,7 @@ jobs:
         env:
           ZIP_PASS: ${{ secrets.ZIP_PASS }}
         run: |
-          7z x -p"${ZIP_PASS}" -y kric.zip
+          7z x -p"${ZIP_PASS}" -y main.zip
 
       - name: Run KRIC Script
         env:
