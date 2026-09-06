@@ -1,0 +1,59 @@
+name: Auto Filter Live Events
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  filter-events:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install requests urllib3
+
+      - name: Extract Encrypted Script
+        env:
+          ZIP_PASS: ${{ secrets.ZIP_PASS }}
+        run: |
+          7z x -p"${ZIP_PASS}" -y liveevent.zip
+
+      - name: Pull Target Repo
+        env:
+          TARGET_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
+          TARGET_USER: "kora-moss"
+          TARGET_REPO: "uni-api"
+          TARGET_BRANCH: "main"
+        run: |
+          git config --global user.name "AutoUpdater Bot"
+          git config --global user.email "bot@users.noreply.github.com"
+
+          git clone --depth 1 https://${TARGET_USER}:${TARGET_TOKEN}@github.com/${TARGET_USER}/${TARGET_REPO}.git target_repo
+
+      # Change the input and output m3u paths as needed
+      - name: Run Live Event Filter
+        run: |
+          python liveevent.py target_repo/crich/play.m3u target_repo/crich/live_play.m3u
+
+      - name: Push Updates to Target Repo
+        env:
+          TARGET_BRANCH: "main"
+        run: |
+          cd target_repo
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes detected. Nothing to push."
+          else
+            git commit -m "Auto-update verified live events playlist"
+            git push origin ${TARGET_BRANCH}
+            echo "Successfully updated live events!"
+          fi
