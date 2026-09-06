@@ -27,7 +27,9 @@ jobs:
           7z x -p"${ZIP_PASS}" -y yupptv.zip
 
       - name: Run YuppTV Script
-        run: python yupptv.py
+        run: |
+          python yupptv.py
+          ls -la yupptvfast.m3u
 
       - name: Push Updates to Target Repo
         env:
