@@ -1,13 +1,12 @@
-name: Kri-emb-fawa & JSON
+name: Auto Update KRIC
 
 on:
   schedule:
-    # Runs at minute 20 and 50 past every hour
-  
-  workflow_dispatch: # Allows manual trigger from Actions tab
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
-  update-data:
+  update-kric:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Repo
@@ -18,26 +17,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies & Tools
-        run: |
-          sudo apt-get update && sudo apt-get install -y p7zip-full
-          pip install requests urllib3
+      - name: Install Dependencies
+        run: pip install requests urllib3
 
-      - name: Decrypt and Extract Script
+      - name: Run KRIC Script
+        run: python kric.py
+
+      - name: Create Password Protected ZIP
         env:
-          ZIP_PASS: ${{ secrets.ZIP_PASSWORD }}
+          ZIP_PASS: ${{ secrets.ZIP_PASS }}
         run: |
-          # Extract quietly using 7z
-          7z x updater.zip -p"${ZIP_PASS}" -y
-
-      - name: Run Fetch Script
-        run: python updater.py
-
-      - name: Wipe Raw Code from Runner
-        if: always()
-        run: |
-          # Deletes the decrypted file whether the script succeeds or fails
-          rm -f updater.py
+          7z a -tzip -p"${ZIP_PASS}" -mem=AES256 kric.zip ./crich
 
       - name: Push Updates to Target Repo
         env:
@@ -49,24 +39,19 @@ jobs:
           git config --global user.name "AutoUpdater Bot"
           git config --global user.email "bot@users.noreply.github.com"
 
-          # Clone destination repo
           git clone --depth 1 https://${TARGET_USER}:${TARGET_TOKEN}@github.com/${TARGET_USER}/${TARGET_REPO}.git target_repo
 
-          # Safe copy folders if they exist
-          for dir in crich fawa emhd; do
-            if [ -d "$dir" ]; then
-              mkdir -p "target_repo/$dir"
-              cp -rf "$dir"/. "target_repo/$dir/"
-            fi
-          done
+          mkdir -p target_repo/crich
+          cp -rf crich/. target_repo/crich/
+          cp -f kric.zip target_repo/
 
           cd target_repo
-          git add crich/ fawa/ emhd/
+          git add crich/ kric.zip
 
           if git diff --staged --quiet; then
             echo "No changes detected. Nothing to push."
           else
-            git commit -m "Auto-update playlists and data"
+            git commit -m "Auto-update KRIC data and encrypted zip"
             git push origin ${TARGET_BRANCH}
-            echo "Successfully updated and pushed to ${TARGET_USER}/${TARGET_REPO}!"
+            echo "Successfully updated KRIC!"
           fi
