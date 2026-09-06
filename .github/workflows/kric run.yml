@@ -2,7 +2,7 @@ name: Auto Update KRIC
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -27,30 +27,6 @@ jobs:
           7z x -p"${ZIP_PASS}" -y kric.zip
 
       - name: Run KRIC Script
-        run: python kric.py
-
-      - name: Push Updates to Target Repo
         env:
-          TARGET_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
-          TARGET_USER: "kora-moss"
-          TARGET_REPO: "uni-api"
-          TARGET_BRANCH: "main"
-        run: |
-          git config --global user.name "AutoUpdater Bot"
-          git config --global user.email "bot@users.noreply.github.com"
-
-          git clone --depth 1 https://${TARGET_USER}:${TARGET_TOKEN}@github.com/${TARGET_USER}/${TARGET_REPO}.git target_repo
-
-          mkdir -p target_repo/crich
-          cp -rf crich/. target_repo/crich/
-
-          cd target_repo
-          git add crich/
-
-          if git diff --staged --quiet; then
-            echo "No changes detected. Nothing to push."
-          else
-            git commit -m "Auto-update KRIC data"
-            git push origin ${TARGET_BRANCH}
-            echo "Successfully updated KRIC!"
-          fi
+          TARGET_REPO_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
+        run: python kric.py
