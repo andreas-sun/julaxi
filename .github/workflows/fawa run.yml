@@ -25,7 +25,7 @@ jobs:
 
       - name: Create Password Protected ZIP
         env:
-          ZIP_PASS: ${{ secrets.FAWA_PASS }}
+          ZIP_PASS: ${{ secrets.ZIP_PASS }}
         run: |
           7z a -tzip -p"${ZIP_PASS}" -mem=AES256 fawa.zip ./fawa
 
