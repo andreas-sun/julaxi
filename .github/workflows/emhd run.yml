@@ -2,7 +2,7 @@ name: Auto Update EMHD
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,14 +20,14 @@ jobs:
       - name: Install Dependencies
         run: pip install requests urllib3
 
-      - name: Run EMHD Script
-        run: python emhd.py
-
-      - name: Create Password Protected ZIP
+      - name: Extract Encrypted Script
         env:
           ZIP_PASS: ${{ secrets.ZIP_PASS }}
         run: |
-          7z a -tzip -p"${ZIP_PASS}" -mem=AES256 emhd.zip ./emhd
+          7z x -p"${ZIP_PASS}" -y emhd.zip
+
+      - name: Run EMHD Script
+        run: python emhd.py
 
       - name: Push Updates to Target Repo
         env:
@@ -43,15 +43,14 @@ jobs:
 
           mkdir -p target_repo/emhd
           cp -rf emhd/. target_repo/emhd/
-          cp -f emhd.zip target_repo/
 
           cd target_repo
-          git add emhd/ emhd.zip
+          git add emhd/
 
           if git diff --staged --quiet; then
             echo "No changes detected. Nothing to push."
           else
-            git commit -m "Auto-update EMHD data and encrypted zip"
+            git commit -m "Auto-update EMHD data"
             git push origin ${TARGET_BRANCH}
             echo "Successfully updated EMHD!"
           fi
