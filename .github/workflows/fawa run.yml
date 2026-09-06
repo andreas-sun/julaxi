@@ -2,7 +2,7 @@ name: Auto Update FAWA
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,14 +20,14 @@ jobs:
       - name: Install Dependencies
         run: pip install requests urllib3
 
-      - name: Run FAWA Script
-        run: python fawa.py
-
-      - name: Create Password Protected ZIP
+      - name: Extract Encrypted Script
         env:
           ZIP_PASS: ${{ secrets.ZIP_PASS }}
         run: |
-          7z a -tzip -p"${ZIP_PASS}" -mem=AES256 fawa.zip ./fawa
+          7z x -p"${ZIP_PASS}" -y fawa.zip
+
+      - name: Run FAWA Script
+        run: python fawa.py
 
       - name: Push Updates to Target Repo
         env:
@@ -43,15 +43,14 @@ jobs:
 
           mkdir -p target_repo/fawa
           cp -rf fawa/. target_repo/fawa/
-          cp -f fawa.zip target_repo/
 
           cd target_repo
-          git add fawa/ fawa.zip
+          git add fawa/
 
           if git diff --staged --quiet; then
             echo "No changes detected. Nothing to push."
           else
-            git commit -m "Auto-update FAWA data and encrypted zip"
+            git commit -m "Auto-update FAWA data"
             git push origin ${TARGET_BRANCH}
             echo "Successfully updated FAWA!"
           fi
